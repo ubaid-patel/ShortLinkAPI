@@ -4,6 +4,7 @@ const sendOTP = require('./sendOTP');
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const axios = require('axios');
+const addToQueue = require('./addToQueue')
 
 function getRandomInt(min, max) {
   const randomDecimal = Math.random();
@@ -63,6 +64,7 @@ async function Authorize(user, users, allLinks) {
     })
 
   } else {
+    console.log(user)
     return ({ ...userResponse, token: token, picture: user.picture, name: user.name, links: links, message: "Login Success" })
   }
 }
@@ -83,7 +85,7 @@ router.post('/signup', async function (req, res, next) {
       if (req.query.otp == otp.otp) {
         const token = generateJwt({email:req.query.email},'24H')
         await users.insertOne({ name: req.query.name, email: req.query.email, password: passhash, endpoints: [], feedbacks: [] })
-        res.status(201).send({ ...userResponse, name: req.query.name, message: "Account Created Successfully", links: [], token: token })
+        res.status(201).json({ ...userResponse, name: req.query.name, message: "Account Created Successfully", links: [], token: token })
       } else {
         res.status(401).send({ message: "Invalid Otp" });
       }
@@ -116,7 +118,8 @@ router.post('/OAuth', async function (req, res, next) {
     const token = generateJwt({ email: user.email }, '24H')
     const existingUser = await users.findOne({ email: user.email });
     if (existingUser) {
-      const resp = await Authorize(existingUser, users, allLinks);
+      await users.updateOne({email:user.email},{$set:{picture:user.picture}});
+      const resp = await Authorize({...existingUser,picture:user.picture}, users, allLinks);
       res.status(201).json(resp);
     } else {
       passhash = await bcrypt.hash(process.env.SECRET_KEY,5)
@@ -131,11 +134,18 @@ router.post('/OAuth', async function (req, res, next) {
 
 
 router.post('/sendOTP',async function (req, res, next) {
+  const users = req.db.collection("users");
+  const user = await users.findOne({email:req.query.email})
+  if(user){
+    res.status(406).send({ message: "User already exist" });
+  }else{
   const otps = req.db.collection("otps");
   const otp = getRandomInt(100000, 999999);
   otps.updateOne({ email: req.query.email }, { $set: { otp: otp, created_at: new Date() } }, { upsert: true })
-  sendOTP(otp,req.query.email).then(message=>console.log(message)).catch(message=>console.log(message))
-  return res.status(201).send({ message: "otp sent successfully" });
+  const send  = await addToQueue(req.query.email,otp)
+  console.log(send);
+  res.status(201).send({ message: "otp sent successfully" });
+  }
 });
 
 router.post('/refreshData', async function (req, res, next) {

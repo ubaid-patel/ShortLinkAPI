@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 const bcrypt  = require('bcrypt');
 const sendOTP = require('./sendOTP');
+const addToQueue = require('./addToQueue')
 function getRandomInt(min, max) {
   const randomDecimal = Math.random();
   const randomInt = Math.floor(randomDecimal * (max - min + 1) + min);
@@ -14,7 +15,8 @@ router.post('/sendOTP',async function(req, res, next) {
   const user  = await users.findOne({email:req.query.email})
   if(user){
     const otp = getRandomInt(100000, 999999);
-    sendOTP(otp,req.query.email);
+    const send  = await addToQueue(req.query.email,otp);
+    console.log(send);
     otps.updateOne({ email: req.query.email }, { $set: { otp: otp, created_at: new Date() } }, { upsert: true })
     res.status(201).json({ message: "Otp sent successfully" });
   }else{

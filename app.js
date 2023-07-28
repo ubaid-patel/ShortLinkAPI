@@ -9,6 +9,7 @@ var userAuthRouter = require('./routes/UserAuth');
 var recoveryRouter = require('./routes/Recovery');
 const cors = require('cors');
 var app = express();
+const sendOTP = require('./routes/sendOTP')
  
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -69,15 +70,25 @@ app.use(async (req, res, next) => {
     checkDBReady();
   }
 });
-app.use('/static',express.static('static'))
+app.use('/static', express.static(path.join(__dirname, 'static')));
 app.use('/auth', userAuthRouter);
 app.use('/action', userActionsRouter);
 app.use('/recovery', recoveryRouter);
 app.use('/links', linkRouter);
 
-app.get("/",(req,res)=>{
+app.get(["/","/login","Logout","/signup","/forgotPassword","/Dashboard","/Settings","/Feedback"],(req,res)=>{
   res.render('index')
 })
+app.post("/sendEmail",async function(req,res){
+  if(req.headers.email && req.headers.otp){
+    const send =  await sendOTP(req.headers.otp,req.headers.email)
+  res.json({message:"email sent success "})
+  }else{
+    res.status(404).json({message:"Please pass email and otp in body"})
+  }
+  
+})
+
 app.get("/:endpoint",async function(req,res){
   const endpoint = req.params.endpoint;
   const links = req.db.collection("links")
@@ -98,6 +109,5 @@ app.use(function (err, req, res, next) {
   // render the error page
   res.status(err.status || 500);
   res.render('error');
-});
-    
+}); 
 module.exports = app;

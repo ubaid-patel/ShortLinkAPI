@@ -28,15 +28,19 @@ async function sendOTP(otp, email) {
     subject: 'URL PRO',
     html: emailContent,
   };
-
-  // Send email
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.log(error)
-    } else {
-      console.log(info.response)
-    }
-  }
+  return(
+    new Promise((resolve,reject)=>{
+        // Send email
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            reject(error)
+          } else {
+           resolve(info.response)
+          }
+        }
+        )
+    })
   )
+
 }
 module.exports = sendOTP

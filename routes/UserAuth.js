@@ -99,7 +99,7 @@ router.post('/signup', async function (req, res, next) {
 router.post('/login', async function (req, res, next) {
   const users = req.db.collection("users");
   const allLinks = req.db.collection('links');
-  const auth = await Authenticate(users, req.query);
+  const auth = await Authenticate(users, req.body);
   if (auth.code === 200) {
     const resp = await Authorize(auth.user, users, allLinks);
     res.status(200).json(resp)
@@ -111,7 +111,7 @@ router.post('/login', async function (req, res, next) {
 router.post('/OAuth', async function (req, res, next) {
   const users = req.db.collection("users");
   const allLinks = req.db.collection("links");
-  const config = { headers: { Authorization: `Bearer ${req.body.accessToken}` } };
+  const config = { headers: { Authorization: `Bearer ${req.headers.authorization}` } };
   try {
     let user = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", config);
     user = user.data;

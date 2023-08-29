@@ -4,11 +4,11 @@ const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 
 /* GET home page. */
-router.put('/changeName', async function (req, res, next) {
+router.put('/changeName/:name', async function (req, res, next) {
   const users  = req.db.collection("users");
   try{
     const verifyToken = await jwt.verify(req.headers.authorization,process.env.SECRET_KEY);
-    users.updateOne({ email: verifyToken.email },{$set:{name:req.body.name}});
+    users.updateOne({ email: verifyToken.email },{$set:{name:req.params.name}});
     res.status(202).json({message:"Name changed successfully"})
   }catch(err){
     res.status(401).json({message:"Session expired"})

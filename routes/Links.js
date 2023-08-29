@@ -59,13 +59,20 @@ router.put('/updateLink/:endpoint', function(req, res, next) {
   res.status(202).json({message:"Changes saved"})
 });
 
-router.delete('/deleteLink', function(req, res, next) {
+router.get("/getLink/:endpoint",async function(req,res){
+  const endpoint = req.params.endpoint;
+  const links = req.db.collection("links")
+  const link = await links.findOneAndUpdate({endpoint:endpoint},{$inc:{views:1}})
+  res.status(200).send(link.value);
+})
+
+router.delete('/deleteLink/:endpoint', function(req, res, next) {
   const allLinks = req.db.collection("links");
   const users = req.db.collection("users");
   if(req.headers.authorization){
     try{
       const verify = jwt.verify(req.headers.authorization,process.env.SECRET_KEY)
-      users.updateOne({email:verify.email},{$pull:{endpoints:req.body.endpoint}})
+      users.updateOne({email:verify.email},{$pull:{endpoints:req.params.endpoint}})
     }catch(err){
       return res.status(401).json({...err,message:"Session expired"})
     }

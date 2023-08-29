@@ -21,7 +21,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -70,15 +69,12 @@ app.use(async (req, res, next) => {
     checkDBReady();
   }
 });
+
 app.use('/static', express.static(path.join(__dirname, 'static')));
 app.use('/auth', userAuthRouter);
-app.use('/action', userActionsRouter);
-app.use('/recovery', recoveryRouter);
+app.use('/user', userActionsRouter);
+app.use('/forgot', recoveryRouter);
 app.use('/links', linkRouter);
-
-app.get(["/","/login","Logout","/signup","/forgotPassword","/Dashboard","/Settings","/Feedback"],(req,res)=>{
-  res.render('index')
-})
 app.post("/sendEmail",async function(req,res){
   if(req.headers.email && req.headers.otp){
     const send =  await sendOTP(req.headers.otp,req.headers.email)
@@ -86,28 +82,21 @@ app.post("/sendEmail",async function(req,res){
   }else{
     res.status(404).json({message:"Please pass email and otp in body"})
   }
-  
+})
+
+app.get("/",(req,res)=>{
+  res.redirect('https://documenter.getpostman.com/view/25483510/2s9Y5ZwMti#intro')
 })
 
 app.get("/:endpoint",async function(req,res){
   const endpoint = req.params.endpoint;
   const links = req.db.collection("links")
   const link = await links.findOneAndUpdate({endpoint:endpoint},{$inc:{views:1}})
-  res.redirect(link.value.url)
+  if(link.value === null){
+    res.redirect("https://urlpro.vercel.app");
+  }else{
+    res.redirect(link.value.url);
+  }
 })
-// catch 404 and forward to error handler
-app.use(function (req, res, next) {
-  next(createError(404));
-});    
 
-// error handler
-app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-}); 
 module.exports = app;

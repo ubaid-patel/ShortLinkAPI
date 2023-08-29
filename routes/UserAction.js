@@ -7,8 +7,8 @@ const bcrypt = require('bcrypt')
 router.put('/changeName', async function (req, res, next) {
   const users  = req.db.collection("users");
   try{
-    const verifyToken = await jwt.verify(req.query.token,process.env.SECRET_KEY);
-    users.updateOne({ email: verifyToken.email },{$set:{name:req.query.name}});
+    const verifyToken = await jwt.verify(req.headers.authorization,process.env.SECRET_KEY);
+    users.updateOne({ email: verifyToken.email },{$set:{name:req.body.name}});
     res.status(202).json({message:"Name changed successfully"})
   }catch(err){
     res.status(401).json({message:"Session expired"})
@@ -17,9 +17,9 @@ router.put('/changeName', async function (req, res, next) {
 
 router.post('/sendFeedback', async function (req, res, next) {
    const users  = req.db.collection("users");
-   const message = req.query.message;
+   const message = req.body.message;
   try{
-    const verifyToken = await jwt.verify(req.query.token,process.env.SECRET_KEY);
+    const verifyToken = await jwt.verify(req.headers.authorization,process.env.SECRET_KEY);
     users.updateOne({ email: verifyToken.email },{$addToSet: { feedbacks: { feedback: message, date:new Date().toISOString()} }});
     res.status(201).json({message:"Feedback sent"})
   }catch(err){
@@ -30,11 +30,11 @@ router.post('/sendFeedback', async function (req, res, next) {
 router.put('/changePassword', async function (req, res, next) {
   const users  = req.db.collection("users");
   try{
-    const verifyToken = await jwt.verify(req.query.token,process.env.SECRET_KEY);
+    const verifyToken = await jwt.verify(req.headers.authorization,process.env.SECRET_KEY);
     const user = await users.findOne({ email: verifyToken.email });
-    const userVerified =await bcrypt.compare(req.query.password,user.password)
+    const userVerified =await bcrypt.compare(req.body.password,user.password)
     if(userVerified){
-      const passh = bcrypt.hashSync(req.query.newPassword,5)
+      const passh = bcrypt.hashSync(req.body.newPassword,5)
       users.updateOne({email:user.email},{$set:{password:passh}})
       res.status(202).json({message:"Password updated"})
     }else{
@@ -48,10 +48,10 @@ router.put('/changePassword', async function (req, res, next) {
 router.delete('/deleteAccount', async function (req, res, next) {
   const users  = req.db.collection("users");
  try{
-   const verifyToken = await jwt.verify(req.query.token,process.env.SECRET_KEY);
+   const verifyToken = await jwt.verify(req.headers.authorization,process.env.SECRET_KEY);
    const user = await users.findOne({ email: verifyToken.email });
    console.log(user.password)
-   const userVerified = await bcrypt.compare(req.query.password,user.password)
+   const userVerified = await bcrypt.compare(req.body.password,user.password)
    if(userVerified){
      users.deleteOne({email:verifyToken.email})
      res.status(202).json({message:"Account deleted"})

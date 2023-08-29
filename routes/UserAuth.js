@@ -75,17 +75,17 @@ const adminResponse = { ...userResponse, users: undefined, feedbacks: undefined 
 router.post('/signup', async function (req, res, next) {
   const otps = req.db.collection("otps");
   const users = req.db.collection("users");
-  const passhash = await bcrypt.hash(req.query.password, 5);
-  const user = await users.findOne({ email: req.query.email });
+  const passhash = await bcrypt.hash(req.body.password, 5);
+  const user = await users.findOne({ email: req.body.email });
   if (user) {
     res.status(406).send({ message: "User Already Exist" })
   } else {
-    const otp = await otps.findOne({ email: req.query.email })
+    const otp = await otps.findOne({ email: req.body.email })
     if (otp) {
-      if (req.query.otp == otp.otp) {
-        const token = generateJwt({email:req.query.email},'24H')
-        await users.insertOne({ name: req.query.name, email: req.query.email, password: passhash, endpoints: [], feedbacks: [] })
-        res.status(201).json({ ...userResponse, name: req.query.name, message: "Account Created Successfully", links: [], token: token })
+      if (req.body.otp == otp.otp) {
+        const token = generateJwt({email:req.body.email},'24H')
+        await users.insertOne({ name: req.body.name, email: req.body.email, password: passhash, endpoints: [], feedbacks: [] })
+        res.status(201).json({ ...userResponse, name: req.body.name, message: "Account Created Successfully", links: [], token: token })
       } else {
         res.status(401).send({ message: "Invalid Otp" });
       }
@@ -111,7 +111,7 @@ router.post('/login', async function (req, res, next) {
 router.post('/OAuth', async function (req, res, next) {
   const users = req.db.collection("users");
   const allLinks = req.db.collection("links");
-  const config = { headers: { Authorization: `Bearer ${req.query.accessToken}` } };
+  const config = { headers: { Authorization: `Bearer ${req.body.accessToken}` } };
   try {
     let user = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", config);
     user = user.data;
@@ -135,14 +135,14 @@ router.post('/OAuth', async function (req, res, next) {
 
 router.post('/sendOTP',async function (req, res, next) {
   const users = req.db.collection("users");
-  const user = await users.findOne({email:req.query.email})
+  const user = await users.findOne({email:req.body.email})
   if(user){
     res.status(406).send({ message: "User already exist" });
   }else{
   const otps = req.db.collection("otps");
   const otp = getRandomInt(100000, 999999);
-  otps.updateOne({ email: req.query.email }, { $set: { otp: otp, created_at: new Date() } }, { upsert: true })
-  const send  = await addToQueue(req.query.email,otp)
+  otps.updateOne({ email: req.body.email }, { $set: { otp: otp, created_at: new Date() } }, { upsert: true })
+  const send  = await addToQueue(req.body.email,otp)
   console.log(send);
   res.status(201).send({ message: "otp sent successfully" });
   }
@@ -152,7 +152,7 @@ router.post('/refreshData', async function (req, res, next) {
   const users = req.db.collection("users");
   const allLinks = req.db.collection("links");
   try{
-    const verifyToken = await jwt.verify(req.query.token,process.env.SECRET_KEY);
+    const verifyToken = await jwt.verify(req.headers.authorization,process.env.SECRET_KEY);
     const user = await users.findOne({ email: verifyToken.email });
     const resp = await Authorize(user,users,allLinks)
     res.status(200).send(resp)

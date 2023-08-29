@@ -21,9 +21,9 @@ router.post('/createLink',async function(req, res, next) {
   const users = req.db.collection("users");
   let inserted = false;
   let user = {isVerified:false,email:null};
-  if(req.query.token){
+  if(req.headers.authorization){
     try{
-      const verifyToken = jwt.verify(req.query.token,process.env.SECRET_KEY)
+      const verifyToken = jwt.verify(req.headers.authorization,process.env.SECRET_KEY)
       user.isVerified = true;
       user.email = verifyToken.email
     }catch(err){
@@ -33,7 +33,7 @@ router.post('/createLink',async function(req, res, next) {
   while(inserted === false){
     try{
       const endpoint = uniqueEnd(6);
-      await allLinks.insertOne({url:req.query.url,endpoint:endpoint,title:req.query.title,views:0})
+      await allLinks.insertOne({url:req.body.url,endpoint:endpoint,title:req.body.title,views:0})
       inserted = true;
       if(user.isVerified){
         users.updateOne({email:user.email},{$addToSet:{endpoints:endpoint}})
@@ -45,31 +45,32 @@ router.post('/createLink',async function(req, res, next) {
   }
 });
 
-router.put('/updateLink', function(req, res, next) {
+router.put('/updateLink/:endpoint', function(req, res, next) {
   const allLinks = req.db.collection("links");
-  if(req.query.token){
+  console.log(req.body)
+  if(req.headers.authorization){
     try{
-      jwt.verify(req.query.token,process.env.SECRET_KEY)
+      jwt.verify(req.headers.authorization,process.env.SECRET_KEY)
     }catch(err){
       return res.status(401).json({...err,message:"Session expired"})
     }
   }
-  allLinks.updateOne({endpoint:req.query.endpoint}, {$set:{url:req.query.url,title:req.query.title } })
+  allLinks.updateOne({endpoint:req.params.endpoint}, {$set:{url:req.body.url,title:req.body.title } })
   res.status(202).json({message:"Changes saved"})
 });
 
 router.delete('/deleteLink', function(req, res, next) {
   const allLinks = req.db.collection("links");
   const users = req.db.collection("users");
-  if(req.query.token){
+  if(req.headers.authorization){
     try{
-      const verify = jwt.verify(req.query.token,process.env.SECRET_KEY)
-      users.updateOne({email:verify.email},{$pull:{endpoints:req.query.endpoint}})
+      const verify = jwt.verify(req.headers.authorization,process.env.SECRET_KEY)
+      users.updateOne({email:verify.email},{$pull:{endpoints:req.body.endpoint}})
     }catch(err){
       return res.status(401).json({...err,message:"Session expired"})
     }
   }
-  allLinks.deleteOne({endpoint:req.query.endpoint})
+  allLinks.deleteOne({endpoint:req.body.endpoint})
   res.status(202).json({message:"Link deleted"})
 });
 
